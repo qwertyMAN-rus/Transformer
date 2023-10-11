@@ -1,0 +1,13 @@
+{
+    "Lua.diagnostics.globals": [
+        "event",
+        "sim",
+        "elements",
+        "graphics",
+        "tpt"
+    ],
+    "Lua.diagnostics.disable": [
+        "deprecated",
+        "inject-field"
+    ]
+}
