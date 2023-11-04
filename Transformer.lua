@@ -122,6 +122,7 @@ local Element = extends(Object)
 function Element:new(posX, posY, width, height)
     local obj = self:super():new()
     self:registerObject(obj)
+    obj._enabled = true
     -- graphics
     obj._anchorX = 0
     obj._anchorY = 0
@@ -129,7 +130,7 @@ function Element:new(posX, posY, width, height)
     obj._posY = posY or 0
     obj._width = width or 0
     obj._height = height or 0
-    obj._padding = 8
+    obj._padding = 5
     obj._lineWidth = 5
     obj._lineHeight = 5
     obj._minWidth = 10
@@ -259,6 +260,9 @@ end
 function Element:selectDetector(x, y)
     self._isSelect = self._raycastTarget and x > self._drawX and x < self._drawX + self._width and y > self._drawY and
         y < self._drawY + self._height or false
+    if self._isSelect then
+        self._mouse._selectElement = self
+    end
     return self._isSelect
 end
 
@@ -388,6 +392,9 @@ function Element:drawBorder()
 end
 
 function Element:draw()
+    if not self._enabled then
+        return
+    end
     self:drawBackground()
     if self._hasBorder then
         self:drawBorder()
@@ -1005,6 +1012,33 @@ function MovableElement:update()
     self._posY = self._posY + (self._up and self._speed or -self._speed)
 end
 
+-- Class ToolTip
+local ToolTip = extends(VerticalFrame)
+
+function ToolTip:new()
+    local obj = self:super():new(0, 0, 200, 100)
+    self:registerObject(obj)
+    obj._titleLabel = Label:new(0, 0, "", 150, 100)
+    obj:addElement(obj._titleLabel)
+    --self._textVisible = false
+    return obj
+end
+
+function ToolTip:update()
+    VerticalFrame.update(self)
+    self._title = ""
+    local target = self._mouse._selectElement
+    if target then
+        if type(target._title) == "string" then
+            self._title = target._title
+        end
+    end
+    self._titleLabel:setText(self._title)
+    local mx, my = self._mouse:getPosition()
+    self:setPosition(mx + 5, my)
+    self._enabled = self._title ~= ""
+end
+
 -- Class Mouse
 local Mouse = extends(Object)
 
@@ -1062,10 +1096,13 @@ local Engine = extends(Container)
 function Engine:new(width, height)
     local obj = self:super():new(0, 0, width or sim.XRES, height or sim.YRES)
     self:registerObject(obj)
+    obj._toolTip = ToolTip:new()
     obj._isWorks = false
     obj._tick = function()
         obj:update()
+        obj._toolTip:update()
         obj:draw()
+        obj._toolTip:draw()
     end
     obj._mouseDown = function(x, y, button)
         return not obj:clickDetector(x, y, button)
@@ -1081,11 +1118,17 @@ function Engine:new(width, height)
     return obj
 end
 
+function Engine:setMouse(mouse)
+    self:super().setMouse(self, mouse)
+    self._toolTip:setMouse(mouse)
+end
+
 function Engine:update()
     if Testing.printEveryTick then
         print()
     end
-    Container.update(self)
+    self._mouse._selectElement = false
+    self:super().update(self)
     local mX, mY = self._mouse:getPosition()
     self:selectDetector(mX, mY)
 end
