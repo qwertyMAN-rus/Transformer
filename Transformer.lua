@@ -54,24 +54,19 @@ end
 
 -- Abstract static base class
 local Object = {}
-function Object:extend()
-    self.__index = self
-    function self:__call(...)
-        return self:new(...)
-    end
 
-    return setmetatable({ _parent = self }, self)
+function Object:registerObject(object)
+    object._myClass = self
+    setmetatable(object, {__index = self})
 end
 
-function Object:getParent()
-    return self._parent
+function Object:super()
+    return self._parentClass
 end
 
-function Object:createObject(...)
-    local parent = self:getParent()
-    local obj = parent and parent.new and parent:new(...) or {}
-    setmetatable(obj, self)
-    self.__index = self
+function Object:new()
+    local obj = {}
+    self:registerObject(obj)
     return obj
 end
 
@@ -99,14 +94,21 @@ function Object:getTable2D(width, height)
     return table
 end
 
+-- extends class
+local function extends(className)
+    return setmetatable({ _parentClass = className }, {__index = className})
+end
+
 -- Class Color
-local Color = Object:extend()
+local Color = extends(Object)
+
 function Color.lerp(color1, color2, value)
 
 end
 
 function Color:new(r, g, b, a)
-    local obj = self:createObject()
+    local obj = self:super():new()
+    self:registerObject(obj)
     obj._r = r or 0
     obj._g = g or 0
     obj._b = b or 0
@@ -115,10 +117,11 @@ function Color:new(r, g, b, a)
 end
 
 -- Abstract class Element
-local Element = Object:extend()
+local Element = extends(Object)
 
 function Element:new(posX, posY, width, height)
-    local obj = self:createObject()
+    local obj = self:super():new()
+    self:registerObject(obj)
     -- graphics
     obj._anchorX = 0
     obj._anchorY = 0
@@ -392,9 +395,11 @@ function Element:draw()
 end
 
 -- Abstrct class Container
-local Container = Element:extend()
+local Container = extends(Element)
+
 function Container:new(posX, posY, width, height)
-    local obj = self:createObject(posX, posY, width, height)
+    local obj = self:super():new(posX, posY, width, height)
+    self:registerObject(obj)
     obj._elements = {}
     obj._isContainer = true
     obj._raycastTarget = false
@@ -521,10 +526,11 @@ function Container:draw()
 end
 
 -- Class Frame
-local Frame = Container:extend()
+local Frame = extends(Container)
 
 function Frame:new(posX, posY, width, height)
-    local obj = self:createObject(posX, posY, width, height)
+    local obj = self:super():new(posX, posY, width, height)
+    self:registerObject(obj)
     obj._isPhysical = Testing.physicalFrames
     obj._isCollider = Testing.physicalFrames
     obj._raycastTarget = true
@@ -534,12 +540,12 @@ function Frame:new(posX, posY, width, height)
 end
 
 function Frame:onClick(x, y, button)
-    Container.onClick(self, x, y, button)
+    self:super():onClick(x, y, button)
     self._isDrag = true
 end
 
 function Frame:onMouseUp(x, y, button)
-    Container.onClick(self, x, y, button)
+    self:super():onClick(x, y, button)
     self._isDrag = false
 end
 
@@ -568,10 +574,11 @@ function Frame:draw()
 end
 
 -- Class VerticalFrame
-local VerticalFrame = Frame:extend()
+local VerticalFrame = extends(Frame)
 
 function VerticalFrame:new(posX, posY, width, height)
-    local obj = self:createObject(posX, posY, width, height)
+    local obj = self:super():new(posX, posY, width, height)
+    self:registerObject(obj)
     obj._autosizeX = true
     return obj
 end
@@ -589,10 +596,11 @@ function VerticalFrame:update()
 end
 
 -- Class HorizontalFrame
-local HorizontalFrame = Frame:extend()
+local HorizontalFrame = extends(Frame)
 
 function HorizontalFrame:new(posX, posY, width, height)
-    local obj = self:createObject(posX, posY, width, height)
+    local obj = self:super():new(posX, posY, width, height)
+    self:registerObject(obj)
     obj._autosizeY = true
     return obj
 end
@@ -610,10 +618,11 @@ function HorizontalFrame:update()
 end
 
 -- Class GridFrame
-local GridFrame = Frame:extend()
+local GridFrame = extends(Frame)
 
 function GridFrame:new(posX, posY, width, height)
-    local obj = self:createObject(posX, posY, width, height)
+    local obj = self:super():new(posX, posY, width, height)
+    self:registerObject(obj)
     --obj._autosizeX = true
     obj._autosizeY = true
     return obj
@@ -632,10 +641,11 @@ function GridFrame:update()
 end
 
 -- Class TableFrame
-local TableFrame = Frame:extend()
+local TableFrame = extends(Frame)
 
 function TableFrame:new(posX, posY, sizeX, sizeY, width, height)
-    local obj = self:createObject(posX, posY, width, height)
+    local obj = self:super():new(posX, posY, width, height)
+    self:registerObject(obj)
     obj._sizeX = sizeX or 5
     obj._sizeY = sizeY or 5
     obj._cells = self:getTable2D(obj._sizeX, obj._sizeY)
@@ -684,10 +694,11 @@ function TableFrame:draw()
 end
 
 -- Class Label
-local Label = Element:extend()
+local Label = extends(Element)
 
 function Label:new(posX, posY, text, width, height)
-    local obj = self:createObject(posX, posY, width, height)
+    local obj = self:super():new(posX, posY, width, height)
+    self:registerObject(obj)
     obj._text = text or ''
     obj._textXAlignment = Enum.TextXAlignment.Left
     obj._textYAlignment = Enum.TextYAlignment.Top
@@ -771,10 +782,11 @@ function Label:draw()
 end
 
 -- Class ProgressBar
-local ProgressBar = Label:extend()
+local ProgressBar = extends(Label)
 
 function ProgressBar:new(posX, posY, text, width, height)
-    local obj = self:createObject(posX, posY, text, width, height)
+    local obj = self:super():new(posX, posY, text, width, height)
+    self:registerObject(obj)
     obj._progress = 0
     obj._padding = 3
     obj._title = text
@@ -828,10 +840,11 @@ function ProgressBar:draw()
 end
 
 -- Class Button
-local Button = Label:extend()
+local Button = extends(Label)
 
 function Button:new(posX, posY, text, width, height)
-    local obj = self:createObject(posX, posY, text, width, height)
+    local obj = self:super():new(posX, posY, text, width, height)
+    self:registerObject(obj)
     obj._padding = 3
     obj._title = text
     obj._textXAlignment = Enum.TextXAlignment.Center
@@ -859,10 +872,11 @@ function Button:draw()
 end
 
 -- Class CheckBox
-local CheckBox = Button:extend()
+local CheckBox = extends(Button)
 
 function CheckBox:new(posX, posY, text)
-    local obj = self:createObject(posX, posY, text or 'Test 2', 15, 15)
+    local obj = self:super():new(posX, posY, text or 'Test 2', 15, 15)
+    self:registerObject(obj)
     obj._textVisible = true -- TODO temp
     --obj._textXAlignment = Enum.TextXAlignment.Left
     obj._textYAlignment = Enum.TextYAlignment.Center
@@ -908,12 +922,13 @@ function CheckBox:draw()
 end
 
 -- Class The powder toy Button
-local TPTButton = Button:extend()
+local TPTButton = extends(Button)
 
 function TPTButton:new(elementID)
     local elementTable = elements.element(elementID)
     local name = elementTable.Name
-    local obj = self:createObject(0, 0, name, 30, 15)
+    local obj = self:super():new(0, 0, name, 30, 15)
+    self:registerObject(obj)
     obj._elementID = elementID
     obj._identifier = elementTable.Identifier
     obj._title = elementTable.Description
@@ -959,9 +974,11 @@ function TPTButton:checkSelectDraw()
 end
 
 -- Class MovableElement. TEST CLASS
-MovableElement = Frame:extend()
+MovableElement = extends(Frame)
+
 function MovableElement:new(posX, posY, width, height, speed)
-    local obj = self:createObject(posX, posY, width, height)
+    local obj = self:super():new(posX, posY, width, height)
+    self:registerObject(obj)
     obj._speed = speed or 1
     obj._right = true
     obj._up = true
@@ -989,9 +1006,11 @@ function MovableElement:update()
 end
 
 -- Class Mouse
-local Mouse = Object:extend()
+local Mouse = extends(Object)
+
 function Mouse:new()
-    local obj = self:createObject()
+    local obj = self:super():new()
+    self:registerObject(obj)
     obj._posX = 0
     obj._posY = 0
     obj._dt = 1 / 60
@@ -1038,9 +1057,11 @@ function Mouse:stop()
 end
 
 -- Class Engine
-local Engine = Container:extend()
+local Engine = extends(Container)
+
 function Engine:new(width, height)
-    local obj = self:createObject(0, 0, width or sim.XRES, height or sim.YRES)
+    local obj = self:super():new(0, 0, width or sim.XRES, height or sim.YRES)
+    self:registerObject(obj)
     obj._isWorks = false
     obj._tick = function()
         obj:update()
@@ -1055,7 +1076,7 @@ function Engine:new(width, height)
     obj._mouseMove = function(x, y, dx, dy)
         return not obj:mouseMoveDetector(x, y, dx, dy)
     end
-    obj:setMouse(Mouse())
+    obj:setMouse(Mouse:new())
     obj:run()
     return obj
 end
@@ -1097,15 +1118,15 @@ function Engine:stop()
 end
 
 -- Program
-local engine = Engine()
+local engine = Engine:new()
 local mouse = engine:getMouse()
 
-local labelName = Label()
-local labelTemp = Label()
-local labelTmp = Label()
-local labelTmp2 = Label()
-local labelTmp3 = Label()
-local labelTmp4 = Label()
+local labelName = Label:new()
+local labelTemp = Label:new()
+local labelTmp = Label:new()
+local labelTmp2 = Label:new()
+local labelTmp3 = Label:new()
+local labelTmp4 = Label:new()
 
 --[[
 local func = labelName.update
@@ -1117,15 +1138,15 @@ end
 --]]
 local BUTTON_SIZE_X = 40
 local BUTTON_SIZE_Y = 15
-local button1 = Button(10, 40, 'Play', BUTTON_SIZE_X, BUTTON_SIZE_Y)
-local button2 = Button(10, 60, 'Stop', BUTTON_SIZE_X, BUTTON_SIZE_Y)
-local button3 = Button(10, 80, 'Pause', BUTTON_SIZE_X, BUTTON_SIZE_Y)
-local tptbutton1 = TPTButton(elements.DEFAULT_PT_METL)
-local tptbutton2 = TPTButton(elements.DEFAULT_PT_SPRK)
-local tptbutton3 = TPTButton(elements.DEFAULT_PT_LAVA)
-local tptbutton4 = TPTButton(elements.DEFAULT_PT_WATR)
-local tptbutton5 = TPTButton(elements.DEFAULT_PT_FILT)
-local progressBar1 = ProgressBar(0, 0, 0, 100, 15)
+local button1 = Button:new(10, 40, 'Play', BUTTON_SIZE_X, BUTTON_SIZE_Y)
+local button2 = Button:new(10, 60, 'Stop', BUTTON_SIZE_X, BUTTON_SIZE_Y)
+local button3 = Button:new(10, 80, 'Pause', BUTTON_SIZE_X, BUTTON_SIZE_Y)
+local tptbutton1 = TPTButton:new(elements.DEFAULT_PT_METL)
+local tptbutton2 = TPTButton:new(elements.DEFAULT_PT_SPRK)
+local tptbutton3 = TPTButton:new(elements.DEFAULT_PT_LAVA)
+local tptbutton4 = TPTButton:new(elements.DEFAULT_PT_WATR)
+local tptbutton5 = TPTButton:new(elements.DEFAULT_PT_FILT)
+local progressBar1 = ProgressBar:new(0, 0, 0, 100, 15)
 local checkbox1 = CheckBox:new()
 local tableFrame1 = TableFrame:new(100, 100, 10, 10)
 function button1:onClick()
@@ -1140,7 +1161,7 @@ function button3:onClick()
     labelName:setText('Pause')
 end
 
-local frame = VerticalFrame(20, 20, 100, 100)
+local frame = VerticalFrame:new(20, 20, 100, 100)
 frame:setLineHeight(0)
 frame:setPadding(20)
 frame:addElement(labelName)
@@ -1160,14 +1181,14 @@ frame:addElement(tptbutton5)
 frame:addElement(checkbox1)
 frame:addElement(progressBar1)
 
-local frameElements = GridFrame(400, 20, 100, 100)
+local frameElements = GridFrame:new(400, 20, 100, 100)
 for id = 1, 3 do
-    frameElements:addElement(TPTButton(id))
+    frameElements:addElement(TPTButton:new(id))
 end
 
-local frameElements2 = VerticalFrame(200, 20, 100, 100)
+local frameElements2 = VerticalFrame:new(200, 20, 100, 100)
 for id = 11, 15 do
-    frameElements2:addElement(TPTButton(id))
+    frameElements2:addElement(TPTButton:new(id))
 end
 
 local movableFrame = MovableElement:new(10, 10, 100, 200)
